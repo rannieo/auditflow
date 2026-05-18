@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+auditflow.db
+.env
+
+# Test artifacts
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/

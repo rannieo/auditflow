@@ -1,0 +1,25 @@
+[project]
+name = "auditflow-api"
+version = "0.1.0"
+description = "AuditFlow AI Lite — FastAPI backend"
+requires-python = ">=3.11"
+
+[tool.fastapi]
+entrypoint = "app.main:app"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+pythonpath = ["."]
+
+[tool.coverage.run]
+source = ["app"]
+omit = [
+    "app/models/*",
+    "app/schemas/*",
+    "app/__init__.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false

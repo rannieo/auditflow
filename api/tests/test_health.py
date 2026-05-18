@@ -1,0 +1,10 @@
+"""Smoke test that the app boots, deps resolve, and /health returns 200."""
+
+from fastapi.testclient import TestClient
+
+
+def test_health_returns_ok_status(client: TestClient) -> None:
+    response = client.get("/api/health")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}

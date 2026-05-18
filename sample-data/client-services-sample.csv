@@ -1,0 +1,5 @@
+client_name,email,amount,service_type,status,date
+ABC Corp,finance@abc.com,12000,tax_filing,pending,2026-05-18
+XYZ LLC,,8000,audit_review,pending,2026-05-18
+ABC Corp,finance@abc.com,12000,tax_filing,pending,2026-05-18
+Bad Client,bad@email.com,-500,unknown_service,pending,2026-05-18
