@@ -31,7 +31,7 @@ into a hardened internal product.
 - Per-record validation against a fixed set of business rules
 - Duplicate detection across a batch (`client_name + email + amount + service_type`)
 - Batch summary metrics (total / passed / failed / duplicate)
-- Deterministic "AI" summary generated from aggregate metrics — no LLM key required
+- AI summary backed by Ollama Cloud (`gpt-oss:120b-cloud`) when `AI_PROVIDER=ollama` + `OLLAMA_API_KEY` is set; deterministic mock otherwise — demo works with no key
 - Mock integrations for Salesforce, SharePoint, and Monday.com
 - Audit log that records every meaningful action with metadata
 
@@ -140,9 +140,11 @@ How the local MVP maps to a hardened Azure deployment:
 ## Honest MVP limitations
 
 - No authentication. Every request is "demo-user".
-- The "AI" summary is deterministic Python. There is a clean seam in
-  `services/ai_summary_service.py` to swap in a real LLM call later — record-level
-  data is never required, only aggregate metrics.
+- The AI summary supports two providers behind an `AiProvider` Protocol:
+  a deterministic `MockProvider` (default) and an `OllamaProvider` that calls
+  the Ollama Cloud hosted API. Switch via `AI_PROVIDER=ollama` +
+  `OLLAMA_API_KEY`. Either way only aggregate metrics are sent — never raw
+  record values. See `api/README.md` for the privacy contract.
 - Integrations are all mocked. Each click writes an audit log entry but no
   network calls are made.
 - No RBAC, multi-tenancy, retention policies, or schema versioning.

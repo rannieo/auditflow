@@ -25,8 +25,49 @@ variables and their defaults:
 | `APP_ENV` | `development` | `development` \| `test` \| `production` |
 | `DATABASE_URL` | `sqlite:///./auditflow.db` | Any SQLAlchemy URL |
 | `CORS_ORIGINS` | `http://localhost:5173` | Comma-separated allowed origins |
-| `AI_PROVIDER` | `mock` | Recorded in `ai_summary_generated` audit metadata |
+| `AI_PROVIDER` | `mock` | `mock` (deterministic, no network) or `ollama` (Ollama Cloud) |
+| `OLLAMA_API_KEY` | empty | Required when `AI_PROVIDER=ollama`; get one at https://ollama.com/settings/keys |
+| `OLLAMA_BASE_URL` | `https://ollama.com` | Cloud API base; override for self-hosted |
+| `OLLAMA_MODEL` | `gpt-oss:120b-cloud` | Model tag (see model note below) |
+| `OLLAMA_TIMEOUT_SECONDS` | `30` | Outbound request timeout |
 | `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` | empty | Reserved for future real-provider work |
+
+### AI summary provider
+
+The `/api/batches/{id}/ai-summary` route is provider-agnostic: it dispatches
+to a small `AiProvider` Protocol with two implementations today —
+`MockProvider` and `OllamaProvider`. The mock is fully deterministic and
+makes no network calls; the Ollama provider calls
+`POST https://ollama.com/api/chat` with a Bearer token.
+
+**Privacy contract.** Both providers receive a `BatchMetrics` dataclass
+containing only aggregate counts (total / passed / failed / duplicate),
+top friendly failure-reason labels, and the filename. Raw `client_name`,
+`email`, `amount`, and `date` values are *never* reachable from a
+provider. A regression test (`test_ai_providers.py
+::test_ollama_request_does_not_leak_pii_fields`) asserts this on every CI run.
+
+**Resilience.** Any provider failure (4xx/5xx/timeout/network/malformed
+response) silently falls back to the mock summary. The user always gets
+a response; the audit log records `status=degraded`, `fallback_from`,
+and a truncated error.
+
+**Logging.** Every Ollama call emits structured INFO/WARNING log lines
+to stdout (visible under `make dev` / `fastapi dev`). API keys are never
+logged. Long responses are truncated at 2000 chars.
+
+```
+ollama_request    model=gpt-oss:120b-cloud url=https://ollama.com/api/chat
+ollama_response   status=200 latency_ms=842 content_chars=312 content=<summary…>
+ollama_error      status=500 latency_ms=120 body={"error":"…"}
+ollama_transport_error  latency_ms=30000 error=TimeoutException(…)
+```
+
+**Model name note.** Per the official docs, `gpt-oss:120b-cloud` is the
+tag for a *local* Ollama daemon that offloads to cloud, while
+`gpt-oss:120b` is the direct-cloud-API tag. We default to
+`gpt-oss:120b-cloud` per the project's preference; switch to
+`gpt-oss:120b` via `OLLAMA_MODEL` if the docs' distinction matters.
 
 `get_settings()` is `@lru_cache`'d. Tests override it via FastAPI's
 `dependency_overrides[get_settings]`.
